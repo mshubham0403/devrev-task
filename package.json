@@ -1,0 +1,27 @@
+{
+  "name": "devrev_task_server",
+  "version": "1.0.0",
+  "description": "Server for Library",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "runDev": "nodemon index.js"
+  },
+  "keywords": [
+    "node",
+    "express",
+    "passport",
+    "mongoose"
+  ],
+  "author": "Shubham Mishra",
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.18.2",
+    "mongoose": "^7.5.2",
+    "passport": "^0.6.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.3.1"
+  }
+}
