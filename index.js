@@ -14,7 +14,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const app = express();
-const port = (process.env.NODE_ENV==='development')?1222 : process.env.PORT;
+const port = (process.env.NODE_ENV ==='production')? process.env.PORT:1222;
 initializePassport(passport);
 
 app.use(cors());
@@ -62,30 +62,56 @@ app.post("/register", async (req, res) => {
   }
 });
 
+
+
+
+
+
+
+app.get("user/cart",(req,res)=>{
+  req.body.user
+})
+
+
+
+
+
+
+
+
 app.post("/recentProducts", async (req, res) => {
   if (!req.body.page) req.body.page = 1;
+  if(!req.body.searchString) req.body.searchString ="fiction";
   const dataArr = await fetch(
-    `https://openlibrary.org/search.json?q=subject_key%3Afiction&mode=everything&limit=15&fields=key,title,author_key,author_name,subject,first_publish_year,ebook_count_i,lccn&sort=old&page=${req.body.page}`
+    `https://openlibrary.org/search.json?q=subject_key%3A${req.body.searchString}&mode=everything&limit=15&fields=key,title,author_key,author_name,subject,first_publish_year,ebook_count_i,lccn&sort=old&page=${req.body.page}`
   );
   const data = await dataArr.json(); 
   const records = data.numFound;
-  const products = data.docs.map( book => {
-    console.log(book);
+  const products = data.docs.map( async (book) => {
     
+    const poductFromDb = await productDb.findOne({product_id:book.key});
+    const previous = (poductFromDb)? poductFromDb[0].stock:null;
     return {
       _id: book.key,
       title: book.title,
-      brand: book.author_name ? book.author_name[0] : "Unknown",
+      author: book.author_name ? book.author_name[0] : "Unknown",
       image : `https://covers.openlibrary.org/b/lccn/${book.lccn?book.lccn[0]:93005405}.jpg`,
-      outOfStock : (book.ebook_count_i)?book.ebook_count_i:0
+      stock : (pevious)?previous:(book.ebook_count_i)?book.ebook_count_i:null,
+      subject:(book.subject)?book.subject[0]:"fiction",
+      publish_date: book.first_publish_year,
     };
   });
   const resObj = {
-    data:products,status:200
+    data:{products:products},status:200,numFound:records
   };
   
   res.json(resObj);
 });
+
+
+
+
+
 
 
 
