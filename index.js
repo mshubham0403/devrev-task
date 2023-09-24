@@ -14,7 +14,7 @@ if (process.env.NODE_ENV !== "production") {
 }
 
 const app = express();
-const port = 1222;
+const port = (process.env.NODE_ENV==='development')?1222 : process.env.PORT;
 initializePassport(passport);
 
 app.use(cors());
@@ -46,20 +46,48 @@ app.get("/", (req, res) => {
 });
 
 app.post("/register", async (req, res) => {
-  console.log("register request");
-
+  console.log("register request",req.body);
+    
   const hashedPassword = await bcrypt.hash(req.body.password, 10);
   const user = { email: req.body.email, password: hashedPassword };
   const userObj = new userDb(user);
   try {
     await userObj.save(userObj);
-
-    res.json({ statusCode:200, savedUser: user });
+    console.log("user created",userObj);
+    const currentTime = new Date().toISOString();
+    res.json({ status:201, createdUser: req.body ,encodedToken:`${user}+${currentTime}` });
   } catch (err) {
     console.log(err);
-    res.json({ statusCode:400});
+    res.json({ status:400});
   }
 });
+
+app.post("/recentProducts", async (req, res) => {
+  if (!req.body.page) req.body.page = 1;
+  const dataArr = await fetch(
+    `https://openlibrary.org/search.json?q=subject_key%3Afiction&mode=everything&limit=15&fields=key,title,author_key,author_name,subject,first_publish_year,ebook_count_i,lccn&sort=old&page=${req.body.page}`
+  );
+  const data = await dataArr.json(); 
+  const records = data.numFound;
+  const products = data.docs.map( book => {
+    console.log(book);
+    
+    return {
+      _id: book.key,
+      title: book.title,
+      brand: book.author_name ? book.author_name[0] : "Unknown",
+      image : `https://covers.openlibrary.org/b/lccn/${book.lccn?book.lccn[0]:93005405}.jpg`,
+      outOfStock : (book.ebook_count_i)?book.ebook_count_i:0
+    };
+  });
+  const resObj = {
+    data:products,status:200
+  };
+  
+  res.json(resObj);
+});
+
+
 
 app.post("/login", (req, res, next) => {
   console.log("login request");
@@ -67,16 +95,16 @@ app.post("/login", (req, res, next) => {
     if (err) {
       throw err;
     } else if (!user) {
-      res.send({ statusCode: 404, status: info, user: null });
+      res.send({ status: 404, data: info });
     } else {
+      const currentTime = new Date().toISOString();
       req.logIn(user, (err) => {
         if (err) {
           throw err;
         } else {
           res.send({
-            statusCode: 200,
-            status: "Success",
-            user: req.body.email,
+            status: 200,
+            data: {foundUser:req.body.email,encodedToken:`${req.body.email}+${currentTime}`},
           });
           console.log(req.user);
         }
